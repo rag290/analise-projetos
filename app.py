@@ -94,7 +94,7 @@ df_rent["Rentabilidade (%)"] = df_rent["Rentabilidade (%)"].map(lambda x: f"{x:.
 st.dataframe(df_rent.reset_index(drop=True), use_container_width=True)
 
 # -------------------- Tabela de Alocação --------------------
-st.markdown("### 🕗 Sugestão de Alocação de Horas diárias (Gestão)")
+st.markdown("### 🕗 Alocação de Horas diárias de gestão - Mês atual")
 
 mes_atual = datetime.datetime.now().strftime("%b")
 mes_atual_pt = {'Jan':'Jan', 'Feb':'Fev', 'Mar':'Mar', 'Apr':'Abr', 'May':'Mai', 'Jun':'Jun',
