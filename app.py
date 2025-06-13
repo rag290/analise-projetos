@@ -135,4 +135,14 @@ df_horas["Rentabilidade (%)"] = df_horas["Rentabilidade (%)"].map(lambda x: f"{x
 df_horas["Rentabilidade Ajustada (%)"] = df_horas["Rentabilidade Ajustada (%)"].map(lambda x: f"{x:.2f}%")
 df_horas["Horas Sugeridas"] = df_mes_corrente["Horas Sugeridas"].map(lambda x: f"{x:.1f}h")
 
-st.dataframe(df_horas.reset_index(drop=True), use_container_width=True)
+# Adiciona destaque para projetos com horas alocadas > 0
+def destacar_linha(row):
+    try:
+        horas = float(str(row["Horas Sugeridas"]).replace("h", "").replace(",", "."))
+        if horas > 0:
+            return ['background-color: lightgreen'] * len(row)
+    except:
+        pass
+    return [''] * len(row)
+
+st.dataframe(df_horas.reset_index(drop=True).style.apply(destacar_linha, axis=1), use_container_width=True)
