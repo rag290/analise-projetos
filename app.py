@@ -83,8 +83,13 @@ col4.metric("📊 Rentabilidade Acumulada", f"{rentabilidade_total:.2f}%")
 
 # -------------------- Tabela de Rentabilidade --------------------
 st.markdown("### 📋 Análise de Rentabilidade dos Projetos")
-df_rent = df_base[[ "Mes", "Nome Cliente", "Nome Projecto", "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)" ]]
-df_rent = df_rent.sort_values(by="Rentabilidade (%)", ascending=False)
+df_rent = df_base[[
+    "Mes", "Mes_Num", "Nome Cliente", "Nome Projecto", 
+    "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)"
+]].copy()
+
+df_rent = df_rent.sort_values(by=["Mes_Num", "Rentabilidade (%)"], ascending=[True, False])
+df_rent.drop(columns=["Mes_Num"], inplace=True)
 
 df_rent["Total Proveitos"] = df_rent["Total Proveitos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Total Custos"] = df_rent["Total Custos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
