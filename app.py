@@ -123,8 +123,23 @@ df_mes_corrente["Dias Suportados"] = df_mes_corrente["Dias Suportados"].apply(la
 
 df_mes_corrente["Peso Alocacao"] = df_mes_corrente["Rentabilidade (%)"].clip(lower=0) * df_mes_corrente["Margem (€)"]
 soma_peso = df_mes_corrente["Peso Alocacao"].sum()
-df_mes_corrente["Horas Sugeridas"] = (df_mes_corrente["Peso Alocacao"] / soma_peso * 8) if soma_peso > 0 else 0
-df_mes_corrente["Horas Sugeridas"] = df_mes_corrente["Horas Sugeridas"].apply(lambda x: round(x * 2) / 2)
+# 1. Distribui as horas proporcionalmente
+df_mes_corrente["Horas Precisas"] = df_mes_corrente["Peso Alocacao"] / soma_peso * 8
+
+# 2. Arredonda para múltiplos de 0.5h
+df_mes_corrente["Horas Arredondadas"] = df_mes_corrente["Horas Precisas"].apply(lambda x: round(x * 2) / 2)
+
+# 3. Corrige a soma se passar de 8h
+soma_ajustada = df_mes_corrente["Horas Arredondadas"].sum()
+
+if soma_ajustada != 8:
+    diferenca = 8 - soma_ajustada
+    idx_max = df_mes_corrente["Horas Precisas"].sub(df_mes_corrente["Horas Arredondadas"]).abs().idxmax()
+    df_mes_corrente.loc[idx_max, "Horas Arredondadas"] += diferenca
+
+# 4. Renomeia a coluna final
+df_mes_corrente["Horas Sugeridas"] = df_mes_corrente["Horas Arredondadas"]
+
 
 df_mes_corrente["Custo Simulado"] = df_mes_corrente["Horas Sugeridas"] * custo_hora
 df_mes_corrente["Novo Custo Total"] = df_mes_corrente["Total Custos"] + df_mes_corrente["Custo Simulado"]
