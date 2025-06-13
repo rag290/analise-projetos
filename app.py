@@ -7,9 +7,14 @@ st.set_page_config(page_title="Dashboard Rentabilidade", layout="wide")
 st.title("📊 Dashboard de Rentabilidade de Projetos")
 
 # 📥 Carregar dados
-df = pd.read_excel("rentabilidade.xlsx")
-df.columns = df.columns.str.strip()
-df = df[df["Mes"].notna()]
+uploaded_file = st.file_uploader("📥 Faça upload do arquivo rentabilidade.xlsx", type=["xlsx"])
+
+if uploaded_file is not None:
+    df = pd.read_excel(uploaded_file)
+    # ... (continua seu código)
+else:
+    st.warning("Por favor, envie o arquivo Excel para iniciar a análise.")
+    st.stop()
 
 # 🗓️ Mapear meses para ordenação
 meses_abreviados = {
