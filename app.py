@@ -84,28 +84,42 @@ col4.metric("📊 Rentabilidade Acumulada", f"{rentabilidade_total:.2f}%")
 # -------------------- Tabela de Rentabilidade --------------------
 st.markdown("### 📋 Análise de Rentabilidade dos Projetos")
 
+df_rent = df_base[[ 
+    "Mes", "Mes_Num", "Nome Cliente", "Nome Projecto", 
+    "Total Proveitos", "Total Custos"
+]].copy()
+
+df_rent["Margem (€)"] = df_rent["Total Proveitos"] - df_rent["Total Custos"]
+
 if "Tudo" in meses_selecionados:
-    df_rent = df_base.groupby(["Nome Cliente", "Nome Projecto"], as_index=False).agg({
+    # Agrupar por projeto + cliente
+    df_rent = df_rent.groupby(["Nome Cliente", "Nome Projecto"], as_index=False).agg({
         "Total Proveitos": "sum",
         "Total Custos": "sum",
         "Margem (€)": "sum"
     })
     df_rent["Rentabilidade (%)"] = df_rent.apply(
         lambda row: (row["Margem (€)"] / row["Total Proveitos"] * 100)
-        if row["Total Proveitos"] > 0 else 0,
+        if row["Total Proveitos"] > 0 else -100 if row["Total Custos"] > 0 else 0,
         axis=1
     )
-else:
-    df_rent = df_base[[
-        "Mes", "Mes_Num", "Nome Cliente", "Nome Projecto",
-        "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)"
+    df_rent = df_rent[[
+        "Nome Cliente", "Nome Projecto", "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)"
     ]].copy()
+else:
+    df_rent["Rentabilidade (%)"] = df_rent.apply(
+        lambda row: (row["Margem (€)"] / row["Total Proveitos"] * 100)
+        if row["Total Proveitos"] > 0 else -100 if row["Total Custos"] > 0 else 0,
+        axis=1
+    )
     df_rent = df_rent.sort_values(by=["Mes_Num", "Rentabilidade (%)"], ascending=[True, False])
     df_rent.drop(columns=["Mes_Num"], inplace=True)
 
+# Formatação
 df_rent["Total Proveitos"] = df_rent["Total Proveitos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Total Custos"] = df_rent["Total Custos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Margem (€)"] = df_rent["Margem (€)"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Rentabilidade (%)"] = df_rent["Rentabilidade (%)"].map(lambda x: f"{x:.2f}%")
 
 st.dataframe(df_rent.reset_index(drop=True), use_container_width=True)
+
