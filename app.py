@@ -83,13 +83,25 @@ col4.metric("📊 Rentabilidade Acumulada", f"{rentabilidade_total:.2f}%")
 
 # -------------------- Tabela de Rentabilidade --------------------
 st.markdown("### 📋 Análise de Rentabilidade dos Projetos")
-df_rent = df_base[[
-    "Mes", "Mes_Num", "Nome Cliente", "Nome Projecto", 
-    "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)"
-]].copy()
 
-df_rent = df_rent.sort_values(by=["Mes_Num", "Rentabilidade (%)"], ascending=[True, False])
-df_rent.drop(columns=["Mes_Num"], inplace=True)
+if "Tudo" in meses_selecionados:
+    df_rent = df_base.groupby(["Nome Cliente", "Nome Projecto"], as_index=False).agg({
+        "Total Proveitos": "sum",
+        "Total Custos": "sum",
+        "Margem (€)": "sum"
+    })
+    df_rent["Rentabilidade (%)"] = df_rent.apply(
+        lambda row: (row["Margem (€)"] / row["Total Proveitos"] * 100)
+        if row["Total Proveitos"] > 0 else 0,
+        axis=1
+    )
+else:
+    df_rent = df_base[[
+        "Mes", "Mes_Num", "Nome Cliente", "Nome Projecto",
+        "Total Proveitos", "Total Custos", "Margem (€)", "Rentabilidade (%)"
+    ]].copy()
+    df_rent = df_rent.sort_values(by=["Mes_Num", "Rentabilidade (%)"], ascending=[True, False])
+    df_rent.drop(columns=["Mes_Num"], inplace=True)
 
 df_rent["Total Proveitos"] = df_rent["Total Proveitos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Total Custos"] = df_rent["Total Custos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -97,73 +109,3 @@ df_rent["Margem (€)"] = df_rent["Margem (€)"].map(lambda x: f"€ {x:,.2f}".
 df_rent["Rentabilidade (%)"] = df_rent["Rentabilidade (%)"].map(lambda x: f"{x:.2f}%")
 
 st.dataframe(df_rent.reset_index(drop=True), use_container_width=True)
-
-# -------------------- Tabela de Alocação --------------------
-st.markdown("### 🕗 Alocação diária de horas de gestão")
-
-mes_atual = datetime.datetime.now().strftime("%b")
-mes_atual_pt = {'Jan':'Jan', 'Feb':'Fev', 'Mar':'Mar', 'Apr':'Abr', 'May':'Mai', 'Jun':'Jun',
-                'Jul':'Jul', 'Aug':'Ago', 'Sep':'Set', 'Oct':'Out', 'Nov':'Nov', 'Dec':'Dez'}[mes_atual]
-df_mes_corrente = df[df["Mes"] == mes_atual_pt].copy()
-
-df_mes_corrente["Total Proveitos"] = pd.to_numeric(df_mes_corrente["Total Proveitos"], errors="coerce").fillna(0)
-df_mes_corrente["Total Custos"] = pd.to_numeric(df_mes_corrente["Total Custos"], errors="coerce").fillna(0)
-df_mes_corrente["Margem (€)"] = df_mes_corrente["Total Proveitos"] - df_mes_corrente["Total Custos"]
-df_mes_corrente["Rentabilidade (%)"] = df_mes_corrente.apply(
-    lambda row: (row["Margem (€)"] / row["Total Proveitos"] * 100)
-    if row["Total Proveitos"] > 0 else -100 if row["Total Custos"] > 0 else 0,
-    axis=1
-)
-df_mes_corrente = df_mes_corrente[df_mes_corrente["Margem (€)"] >= 262].copy()
-
-custo_dia = 262
-custo_hora = custo_dia / 8
-df_mes_corrente["Dias Suportados"] = df_mes_corrente["Margem (€)"] / custo_dia
-df_mes_corrente["Dias Suportados"] = df_mes_corrente["Dias Suportados"].apply(lambda x: max(0, round(x, 1)))
-
-df_mes_corrente["Peso Alocacao"] = df_mes_corrente["Rentabilidade (%)"].clip(lower=0) * df_mes_corrente["Margem (€)"]
-soma_peso = df_mes_corrente["Peso Alocacao"].sum()
-
-if soma_peso > 0:
-    df_mes_corrente["Horas Precisas"] = df_mes_corrente["Peso Alocacao"] / soma_peso * 8
-    df_mes_corrente["Horas Arredondadas"] = df_mes_corrente["Horas Precisas"].apply(lambda x: round(x * 2) / 2)
-
-    soma_ajustada = df_mes_corrente["Horas Arredondadas"].sum()
-    diferenca = round(8.0 - soma_ajustada, 2)
-
-    if abs(diferenca) > 0:
-        df_mes_corrente["Delta"] = df_mes_corrente["Horas Precisas"] - df_mes_corrente["Horas Arredondadas"]
-        idx_ajuste = df_mes_corrente["Delta"].abs().idxmax()
-        df_mes_corrente.loc[idx_ajuste, "Horas Arredondadas"] += diferenca
-        df_mes_corrente["Horas Arredondadas"] = df_mes_corrente["Horas Arredondadas"].apply(lambda x: round(x * 2) / 2)
-
-    df_mes_corrente["Horas Sugeridas"] = df_mes_corrente["Horas Arredondadas"]
-else:
-    df_mes_corrente["Horas Sugeridas"] = 0
-
-
-df_mes_corrente["Custo Simulado"] = df_mes_corrente["Horas Sugeridas"] * custo_hora
-df_mes_corrente["Novo Custo Total"] = df_mes_corrente["Total Custos"] + df_mes_corrente["Custo Simulado"]
-df_mes_corrente["Rentabilidade Ajustada (%)"] = df_mes_corrente.apply(
-    lambda row: ((row["Total Proveitos"] - row["Novo Custo Total"]) / row["Total Proveitos"]) * 100
-    if row["Total Proveitos"] > 0 else -100 if row["Total Custos"] > 0 else 0,
-    axis=1
-)
-
-df_horas = df_mes_corrente[[ "Nome Cliente", "Nome Projecto", "Margem (€)", "Rentabilidade (%)", "Dias Suportados", "Horas Sugeridas", "Rentabilidade Ajustada (%)" ]].copy()
-df_horas["Margem (€)"] = df_horas["Margem (€)"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-df_horas["Rentabilidade (%)"] = df_horas["Rentabilidade (%)"].map(lambda x: f"{x:.2f}%")
-df_horas["Rentabilidade Ajustada (%)"] = df_horas["Rentabilidade Ajustada (%)"].map(lambda x: f"{x:.2f}%")
-df_horas["Horas Sugeridas"] = df_mes_corrente["Horas Sugeridas"].map(lambda x: f"{x:.1f}h")
-
-# Adiciona destaque para projetos com horas alocadas > 0
-def destacar_linha(row):
-    try:
-        horas = float(str(row["Horas Sugeridas"]).replace("h", "").replace(",", "."))
-        if horas > 0:
-            return ['background-color: lightgreen'] * len(row)
-    except:
-        pass
-    return [''] * len(row)
-
-st.dataframe(df_horas.reset_index(drop=True).style.apply(destacar_linha, axis=1), use_container_width=True)
