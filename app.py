@@ -119,6 +119,12 @@ else:
 df_rent["Total Proveitos"] = df_rent["Total Proveitos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Total Custos"] = df_rent["Total Custos"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Margem (€)"] = df_rent["Margem (€)"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+# Filtro por rentabilidade baixa (<= 30%)
+filtrar_rent_baixa = st.checkbox("🔻 Mostrar apenas projetos com rentabilidade até 30%")
+
+if filtrar_rent_baixa:
+    df_rent = df_rent[df_rent["Rentabilidade (%)"] <= 30]
+
 df_rent["Rentabilidade (%)"] = df_rent["Rentabilidade (%)"].map(lambda x: f"{x:.2f}%")
 
 # Função de destaque condicional
