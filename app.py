@@ -121,7 +121,22 @@ df_rent["Total Custos"] = df_rent["Total Custos"].map(lambda x: f"€ {x:,.2f}".
 df_rent["Margem (€)"] = df_rent["Margem (€)"].map(lambda x: f"€ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 df_rent["Rentabilidade (%)"] = df_rent["Rentabilidade (%)"].map(lambda x: f"{x:.2f}%")
 
-st.dataframe(df_rent.reset_index(drop=True), use_container_width=True)
+# Função de destaque condicional
+def destacar_rentabilidade(row):
+    try:
+        valor = float(str(row["Rentabilidade (%)"]).replace("%", "").replace(",", "."))
+        if valor <= 30:
+            return ['background-color: #f8d7da'] * len(row)  # vermelho claro
+    except:
+        pass
+    return [''] * len(row)
+
+# Apresentação com destaque
+st.dataframe(
+    df_rent.reset_index(drop=True).style.apply(destacar_rentabilidade, axis=1),
+    use_container_width=True
+)
+
 
 # -------------------- Tabela de Alocação --------------------
 st.markdown("### 🕗 Alocação diária de horas de gestão")
